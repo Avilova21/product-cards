@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
   Button,
-  debounce,
+  debounce, FormControl,
+  InputLabel,
   MenuItem,
   OutlinedInput,
   Select,
@@ -42,7 +43,12 @@ export const ProductFilters = ({ submitFilters, initialFilter = defaultFilter, r
     setFilter({ field: key, value: ''})
   };
 
+  const hasBrandFilterValue = filterData.brand?.length
+  const hasPriceFilterValue = filterData.price?.length
+
   useEffect(() => {
+    if (hasBrandFilterValue && hasPriceFilterValue) return
+
     const fetchFilterValues = async () => {
       try {
         for (const filterKey of filterFields) {
@@ -57,12 +63,10 @@ export const ProductFilters = ({ submitFilters, initialFilter = defaultFilter, r
         }
       } catch (_) {
         setError(TEXT_ERROR.FETCH_FILTERS)
-
-        await fetchFilterValues()
       }}
 
     fetchFilterValues()
-  }, [])
+  }, [error])
 
   useEffect(() => {
     if (!filter?.field || !filter?.value) return;
@@ -76,39 +80,53 @@ export const ProductFilters = ({ submitFilters, initialFilter = defaultFilter, r
   }
 
   const onChangeProductFilter = debounce((e) => {
-      setFilter((prevState) => ({ ...prevState, value: e.target.value}))
-    }, 500)
+    setFilter((prevState) => ({ ...prevState, value: e.target.value}))
+  }, 500)
+
+  const filterFieldsList = useMemo(() => {
+    return filterFields.filter((f) => f.length).map((type) => (
+      <MenuItem key={type} value={type}>{type}</MenuItem>
+    ))
+  }, [])
+
 
   return (
-
     <Box sx={{ display: 'flex', gap: '10px', marginBottom: '20px', height: '40px'}}>
-      <Select
-        sx={{minWidth: 120}}
-        renderValue={() => filter?.field || ''}
-        onChange={handleChange}
-        disabled={!filter?.field || error}
-      >
-        {filterFields.map((type) => (
-          <MenuItem key={type} value={type}>{type}</MenuItem>
-        ))}
-      </Select>
-      {filter?.field === EFilterField.product ? (
-        <OutlinedInput title='value' onChange={onChangeProductFilter} />
-      ) : (
-        <Select<number>
-          maxRows={10}
-          sx={{minWidth: 120}}
-          renderValue={() => filter?.value || ''}
-          onChange={(e) => {
-            setFilter((prevState) => ({ ...prevState, value: e.target.value}))}
-          }
-          disabled={!filter?.field || error}
-
+      <FormControl fullWidth size="small">
+        <InputLabel id="filter-select-label">filter</InputLabel>
+        <Select
+          labelId="filter-select-label"
+          label="filter"
+          sx={{minWidth: 200}}
+          renderValue={() => filter?.field || ''}
+          onChange={handleChange}
+          disabled={!hasBrandFilterValue && !hasPriceFilterValue || error}
         >
-          {filterData[filter.field]?.map((type) => (
-            <MenuItem key={type} value={type}>{type}</MenuItem>
-          ))}
+          {filterFieldsList}
         </Select>
+      </FormControl>
+      {filter?.field === EFilterField.product ? (
+        <OutlinedInput sx={{minWidth: 200}} title='value' onChange={onChangeProductFilter} />
+      ) : (
+        <FormControl fullWidth size="small">
+          <InputLabel id="value-select-label">value</InputLabel>
+          <Select<number>
+            labelId="filter-select-label"
+            label="value"
+            maxRows={10}
+            sx={{minWidth: 200}}
+            renderValue={() => filter?.value || ''}
+            onChange={(e) => {
+              setFilter((prevState) => ({ ...prevState, value: e.target.value}))}
+            }
+            disabled={!filter?.field || error}
+
+          >
+            {filterData[filter.field]?.map((type) => (
+              <MenuItem key={type} value={type}>{type}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       )}
       <Box display="flex" gap={1}>
         <Button onClick={handleReset} disabled={!filter?.field && !filter?.value}>Сбросить</Button>
